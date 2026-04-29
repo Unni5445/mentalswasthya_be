@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "ES6", // Outputs ES6 JavaScript
+    "module": "commonjs", // Uses CommonJS for Node.js compatibility
+    "outDir": "./dist", // Compiles TypeScript to JavaScript in the dist folder
+    "strict": true, // Enables all strict type-checking options
+    "esModuleInterop": true, // Allows default import from CommonJS modules
+    "skipLibCheck": true, // Skips type checking of declaration files for faster builds
+    "resolveJsonModule": true // Enables importing JSON modules
+  },
+  "include": ["*.ts", "src/**/*.ts"], // Includes all TypeScript files in the root and src folder
+  "exclude": ["node_modules", "dist"] // Excludes unnecessary folders
+}
