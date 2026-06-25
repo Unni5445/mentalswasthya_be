@@ -1,6 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import { softDeletePlugin, ISoftDelete } from '../utils/softDelete.plugin';
 
-export interface IOrg extends Document {
+export interface IOrg extends Document, ISoftDelete {
   name: string;
   domain?: string;
   adminEmail: string;
@@ -41,6 +42,8 @@ const orgSchema = new Schema<IOrg>(
 );
 
 orgSchema.index({ domain: 1 });
+
+orgSchema.plugin(softDeletePlugin);
 
 const Org = mongoose.model<IOrg>('Org', orgSchema);
 export default Org;

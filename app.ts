@@ -20,6 +20,8 @@ import breathingRoutes from "./src/routes/breathing.routes";
 import notificationRoutes from "./src/routes/notification.routes";
 import adminRoutes from "./src/routes/admin.routes";
 import musicRoutes from "./src/routes/music.routes";
+import affirmationRoutes from "./src/routes/affirmation.routes";
+import meditationRoutes from "./src/routes/meditation.routes";
 
 dotenv.config();
 const app = express();
@@ -80,6 +82,8 @@ app.use("/api/breathing", breathingRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/saas", adminRoutes);
 app.use("/api/music", musicRoutes);
+app.use("/api/affirmation", affirmationRoutes);
+app.use("/api/meditation", meditationRoutes);
 
 // DB Connection
 mongoose

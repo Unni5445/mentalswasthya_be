@@ -1,7 +1,8 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import bcrypt from 'bcrypt';
+import { softDeletePlugin, ISoftDelete } from '../utils/softDelete.plugin';
 
-export interface IUser extends Document {
+export interface IUser extends Document, ISoftDelete {
   name: string;
   email: string;
   password?: string;
@@ -15,6 +16,8 @@ export interface IUser extends Document {
   lastLoginAt: Date | null;
   passwordChangedAt: Date | null;
   refreshToken: string | null;
+  favoriteAffirmations: mongoose.Types.ObjectId[];
+  favoriteMeditations: mongoose.Types.ObjectId[];
   comparePassword(candidate: string): Promise<boolean>;
   isLocked(): boolean;
 }
@@ -48,6 +51,9 @@ const userSchema = new Schema<IUser>(
     lastLoginAt: { type: Date, default: null },
     passwordChangedAt: { type: Date, default: null },
     refreshToken: { type: String, select: false, default: null },
+
+    favoriteAffirmations: [{ type: Schema.Types.ObjectId, ref: 'Affirmation' }],
+    favoriteMeditations: [{ type: Schema.Types.ObjectId, ref: 'Meditation' }],
   },
   { timestamps: true }
 );
@@ -74,6 +80,8 @@ userSchema.methods.isLocked = function (): boolean {
 };
 
 userSchema.index({ org: 1 });
+
+userSchema.plugin(softDeletePlugin);
 
 const User = mongoose.model<IUser>('User', userSchema);
 export default User;

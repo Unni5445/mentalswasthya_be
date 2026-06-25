@@ -5,7 +5,10 @@ import Streak from './streak.model';
 import Subscription from './subscription.model';
 import Notification from './notification.model';
 import AuditLog from './auditlog.model';
+import Plan from './plan.model';
 import Music from './music.model';
+import Affirmation from './affirmation.model';
+import Meditation from './meditation.model';
 
 export {
   User,
@@ -13,7 +16,10 @@ export {
   BreathingSession,
   Streak,
   Subscription,
+  Plan,
   Notification,
   AuditLog,
   Music,
+  Affirmation,
+  Meditation,
 };

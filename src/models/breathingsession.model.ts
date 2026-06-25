@@ -1,14 +1,16 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import { softDeletePlugin, ISoftDelete } from '../utils/softDelete.plugin';
+import { BREATHING_TECHNIQUES, BREATHING_SHAPES, SESSION_START_OPTIONS, BreathingTechnique, BreathingShape, SessionStartOption } from '../utils/constants';
 
-export interface IBreathingSession extends Document {
+export interface IBreathingSession extends Document, ISoftDelete {
   user: mongoose.Types.ObjectId;
   org: mongoose.Types.ObjectId | null;
-  technique: '4-7-8' | '4-4-4-4' | '4-4' | null;
-  shape: 'box' | 'triangle' | 'circle' | null;
+  technique: BreathingTechnique | null;
+  shape: BreathingShape | null;
   durationSeconds: number;
   cyclesCompleted: number;
   soundEnabled: boolean;
-  startedBy: 'first_login_of_day' | 'every_login' | 'manual';
+  startedBy: SessionStartOption;
   completedAt: Date | null;
   isCompleted: boolean;
 }
@@ -20,12 +22,12 @@ const breathingSessionSchema = new Schema<IBreathingSession>(
 
     technique: {
       type: String,
-      enum: ['4-7-8', '4-4-4-4', '4-4', null],
+      enum: [...BREATHING_TECHNIQUES, null],
       default: null,
     },
     shape: {
       type: String,
-      enum: ['box', 'triangle', 'circle', null],
+      enum: [...BREATHING_SHAPES, null],
       default: null,
     },
 
@@ -35,7 +37,7 @@ const breathingSessionSchema = new Schema<IBreathingSession>(
 
     startedBy: {
       type: String,
-      enum: ['first_login_of_day', 'every_login', 'manual'],
+      enum: SESSION_START_OPTIONS,
       required: true,
     },
 
@@ -48,6 +50,8 @@ const breathingSessionSchema = new Schema<IBreathingSession>(
 breathingSessionSchema.index({ user: 1, createdAt: -1 });
 breathingSessionSchema.index({ org: 1, createdAt: -1 });
 breathingSessionSchema.index({ user: 1, isCompleted: 1 });
+
+breathingSessionSchema.plugin(softDeletePlugin);
 
 const BreathingSession = mongoose.model<IBreathingSession>('BreathingSession', breathingSessionSchema);
 export default BreathingSession;
