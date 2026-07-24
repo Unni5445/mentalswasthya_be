@@ -15,18 +15,14 @@ class MeditationController {
         throw { status: 400, message: 'Audio file is required' };
       }
 
-      if (!language) {
-        throw { status: 400, message: 'Language is required' };
-      }
-
       const audioUrl = `/uploads/meditation/${files.audio[0].filename}`;
       const thumbnailUrl = files.thumbnail ? `/uploads/meditation/${files.thumbnail[0].filename}` : undefined;
 
       const meditation = await Meditation.create({
         title,
-        artist,
+        artist: artist || 'Self',
         category,
-        language,
+        language: language || 'english',
         isActive: isActive !== 'false' && isActive !== false,
         audioUrl,
         thumbnailUrl
@@ -40,7 +36,7 @@ class MeditationController {
         meta: { title: meditation.title }
       });
 
-      res.status(201).json(new ApiResponse(201, { meditation }, 'Meditation uploaded successfully'));
+      res.status(201).json(new ApiResponse(201, { meditation, ...meditation.toObject() }, 'Meditation uploaded successfully'));
     }
   );
 

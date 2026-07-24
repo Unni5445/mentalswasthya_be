@@ -49,6 +49,15 @@ router.post(
   AffirmationController.uploadAffirmation
 );
 
+router.post(
+  '/',
+  affirmationUpload.fields([
+    { name: 'audio', maxCount: 1 },
+    { name: 'thumbnail', maxCount: 1 }
+  ]),
+  AffirmationController.uploadAffirmation
+);
+
 /**
  * @swagger
  * /api/affirmation:

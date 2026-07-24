@@ -8,6 +8,7 @@ export interface IBreathingSession extends Document, ISoftDelete {
   technique: BreathingTechnique | null;
   shape: BreathingShape | null;
   durationSeconds: number;
+  completedSeconds: number;
   cyclesCompleted: number;
   soundEnabled: boolean;
   startedBy: SessionStartOption;
@@ -22,16 +23,15 @@ const breathingSessionSchema = new Schema<IBreathingSession>(
 
     technique: {
       type: String,
-      enum: [...BREATHING_TECHNIQUES, null],
       default: null,
     },
     shape: {
       type: String,
-      enum: [...BREATHING_SHAPES, null],
       default: null,
     },
 
     durationSeconds: { type: Number, required: true },
+    completedSeconds: { type: Number, default: 0 },
     cyclesCompleted: { type: Number, default: 0 },
     soundEnabled: { type: Boolean, default: true },
 

@@ -19,7 +19,15 @@ export interface IAuditLog extends Document {
     | 'payment_succeeded'
     | 'payment_failed'
     | 'report_generated'
-    | 'settings_updated';
+    | 'settings_updated'
+    | 'breathing_session_completed'
+    | 'meditation_uploaded'
+    | 'meditation_deleted'
+    | 'affirmation_uploaded'
+    | 'affirmation_deleted'
+    | 'music_uploaded'
+    | 'music_deleted'
+    | 'org_created';
   targetModel: string | null;
   targetId: mongoose.Types.ObjectId | null;
   meta: any;
@@ -51,6 +59,14 @@ const auditLogSchema = new Schema<IAuditLog>(
         'payment_failed',
         'report_generated',
         'settings_updated',
+        'breathing_session_completed',
+        'meditation_uploaded',
+        'meditation_deleted',
+        'affirmation_uploaded',
+        'affirmation_deleted',
+        'music_uploaded',
+        'music_deleted',
+        'org_created',
       ],
       required: true,
     },

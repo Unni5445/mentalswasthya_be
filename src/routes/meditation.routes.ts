@@ -49,6 +49,15 @@ router.post(
   MeditationController.uploadMeditation
 );
 
+router.post(
+  '/',
+  meditationUpload.fields([
+    { name: 'audio', maxCount: 1 },
+    { name: 'thumbnail', maxCount: 1 }
+  ]),
+  MeditationController.uploadMeditation
+);
+
 /**
  * @swagger
  * /api/meditation:

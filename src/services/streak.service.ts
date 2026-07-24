@@ -1,6 +1,7 @@
 import { Streak } from '../models';
 
-export const recordSession = async (userId: any, sessionDate: Date = new Date()) => {
+export const recordSession = async (userId: any, sessionDate?: Date | null) => {
+  const date = sessionDate || new Date();
   let streak = await Streak.findOne({ user: userId });
 
   if (!streak) {
@@ -8,7 +9,7 @@ export const recordSession = async (userId: any, sessionDate: Date = new Date())
   }
 
   // Use the method defined in the model
-  streak.recordSession(sessionDate);
+  streak.recordSession(date);
   
   // Check for milestones (e.g., 7 days, 30 days)
   const milestoneValues = [7, 30, 90, 365];
@@ -17,7 +18,7 @@ export const recordSession = async (userId: any, sessionDate: Date = new Date())
     if (!alreadyAchieved) {
       streak.milestones.push({
         streak: streak.currentStreak,
-        achievedAt: sessionDate
+        achievedAt: date
       });
     }
   }

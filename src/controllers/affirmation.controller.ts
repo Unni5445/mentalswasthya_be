@@ -15,18 +15,14 @@ class AffirmationController {
         throw { status: 400, message: 'Audio file is required' };
       }
 
-      if (!language) {
-        throw { status: 400, message: 'Language is required' };
-      }
-
       const audioUrl = `/uploads/affirmation/${files.audio[0].filename}`;
       const thumbnailUrl = files.thumbnail ? `/uploads/affirmation/${files.thumbnail[0].filename}` : undefined;
 
       const affirmation = await Affirmation.create({
         title,
-        artist,
+        artist: artist || 'Self',
         category,
-        language,
+        language: language || 'english',
         isActive: isActive !== 'false' && isActive !== false,
         audioUrl,
         thumbnailUrl
@@ -40,7 +36,7 @@ class AffirmationController {
         meta: { title: affirmation.title }
       });
 
-      res.status(201).json(new ApiResponse(201, { affirmation }, 'Affirmation uploaded successfully'));
+      res.status(201).json(new ApiResponse(201, { affirmation, ...affirmation.toObject() }, 'Affirmation uploaded successfully'));
     }
   );
 
