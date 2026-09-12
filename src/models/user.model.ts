@@ -16,6 +16,8 @@ export interface IUser extends Document, ISoftDelete {
   lastLoginAt: Date | null;
   passwordChangedAt: Date | null;
   refreshToken: string | null;
+  resetPasswordToken?: string | null;
+  resetPasswordExpires?: Date | null;
   favoriteAffirmations: mongoose.Types.ObjectId[];
   favoriteMeditations: mongoose.Types.ObjectId[];
   comparePassword(candidate: string): Promise<boolean>;
@@ -51,6 +53,8 @@ const userSchema = new Schema<IUser>(
     lastLoginAt: { type: Date, default: null },
     passwordChangedAt: { type: Date, default: null },
     refreshToken: { type: String, select: false, default: null },
+    resetPasswordToken: { type: String, select: false, default: null },
+    resetPasswordExpires: { type: Date, select: false, default: null },
 
     favoriteAffirmations: [{ type: Schema.Types.ObjectId, ref: 'Affirmation' }],
     favoriteMeditations: [{ type: Schema.Types.ObjectId, ref: 'Meditation' }],

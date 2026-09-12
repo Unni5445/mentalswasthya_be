@@ -83,6 +83,22 @@ class AuthController {
       res.status(200).json(new ApiResponse(200, {}, 'Logged out'));
     }
   );
+
+  static forgotPassword = asyncHandler(
+    async (req: Request, res: Response, next: NextFunction) => {
+      const { email } = req.body;
+      const result = await authService.forgotPassword(email);
+      res.status(200).json(new ApiResponse(200, result, result.message));
+    }
+  );
+
+  static resetPassword = asyncHandler(
+    async (req: Request, res: Response, next: NextFunction) => {
+      const { token, password } = req.body;
+      const result = await authService.resetPassword(token, password);
+      res.status(200).json(new ApiResponse(200, result, result.message));
+    }
+  );
 }
 
 export default AuthController;

@@ -50,6 +50,8 @@ router.post('/individual/register', AuthController.individualRegister);
  *         description: Login successful
  */
 router.post('/individual/login', AuthController.individualLogin);
+router.post('/individual/forgot-password', AuthController.forgotPassword);
+router.post('/individual/reset-password', AuthController.resetPassword);
 
 // ── Corporate portal ──────────────────────────────────────────────────────────
 /**
@@ -110,5 +112,7 @@ router.post(
 // ── Shared ────────────────────────────────────────────────────────────────────
 router.post('/refresh', AuthController.refresh);
 router.post('/logout', protect, AuthController.logout);
+router.post('/forgot-password', AuthController.forgotPassword);
+router.post('/reset-password', AuthController.resetPassword);
 
 export default router;
