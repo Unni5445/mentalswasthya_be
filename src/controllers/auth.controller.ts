@@ -15,8 +15,7 @@ class AuthController {
     async (req: Request, res: Response, next: NextFunction) => {
       const { name, email, password } = req.body;
       const result = await authService.individualRegister({ name, email, password });
-      res.cookie('refreshToken', result.refreshToken, cookieOptions);
-      res.status(201).json(new ApiResponse(201, { accessToken: result.accessToken, user: result.user }));
+      res.status(201).json(new ApiResponse(201, result, result.message));
     }
   );
 
@@ -96,6 +95,23 @@ class AuthController {
     async (req: Request, res: Response, next: NextFunction) => {
       const { token, password } = req.body;
       const result = await authService.resetPassword(token, password);
+      res.status(200).json(new ApiResponse(200, result, result.message));
+    }
+  );
+
+  static verifyEmail = asyncHandler(
+    async (req: Request, res: Response, next: NextFunction) => {
+      const { token, email, otp } = req.body;
+      const result = await authService.verifyEmail({ token, email, otp });
+      res.cookie('refreshToken', result.refreshToken, cookieOptions);
+      res.status(200).json(new ApiResponse(200, { accessToken: result.accessToken, user: result.user }, result.message));
+    }
+  );
+
+  static resendVerification = asyncHandler(
+    async (req: Request, res: Response, next: NextFunction) => {
+      const { email } = req.body;
+      const result = await authService.resendVerification(email);
       res.status(200).json(new ApiResponse(200, result, result.message));
     }
   );

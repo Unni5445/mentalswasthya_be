@@ -1,5 +1,6 @@
 import { Response, NextFunction, Request } from 'express';
 import * as notificationService from '../services/notification.service';
+import * as streakService from '../services/streak.service';
 import asyncHandler from '../utils/asyncHandler';
 import ApiResponse from '../utils/ApiResponse';
 
@@ -24,6 +25,13 @@ class NotificationController {
     async (req: Request, res: Response, next: NextFunction) => {
       await notificationService.markAllAsRead(req.user._id);
       res.status(200).json(new ApiResponse(200, {}, 'All notifications marked as read'));
+    }
+  );
+
+  static triggerStreakReminders = asyncHandler(
+    async (req: Request, res: Response, next: NextFunction) => {
+      const result = await streakService.sendStreakReminders();
+      res.status(200).json(new ApiResponse(200, result, result.message));
     }
   );
 }

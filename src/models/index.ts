@@ -9,6 +9,7 @@ import Plan from './plan.model';
 import Music from './music.model';
 import Affirmation from './affirmation.model';
 import Meditation from './meditation.model';
+import SupportMessage from './support.model';
 
 export {
   User,
@@ -22,4 +23,5 @@ export {
   Music,
   Affirmation,
   Meditation,
+  SupportMessage,
 };

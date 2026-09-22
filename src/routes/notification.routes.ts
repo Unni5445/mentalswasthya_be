@@ -65,5 +65,6 @@ router.patch('/:id/read', NotificationController.markRead);
  *         description: All notifications marked as read
  */
 router.patch('/read-all', NotificationController.markAllRead);
+router.post('/streak-reminders', NotificationController.triggerStreakReminders);
 
 export default router;

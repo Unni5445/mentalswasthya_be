@@ -41,23 +41,58 @@ export const individualRegister = async ({ name, email, password }: any) => {
   const existing = await User.findOne({ email });
   if (existing) throw { status: 409, message: 'Email already registered' };
 
+  const verificationToken = crypto.randomBytes(32).toString('hex');
+  const hashedToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
   const user = await User.create({
     name,
     email,
     password,
     role: 'individual',
     org: null,
+    isEmailVerified: false,
+    emailVerificationToken: hashedToken,
+    emailVerificationOtp: otp,
+    emailVerificationExpires: expires,
   });
 
   await AuditLog.create({ actor: user._id, action: 'user_created', targetModel: 'User', targetId: user._id });
 
-  const accessToken = signAccessToken(user._id, user.role, 'individual');
-  const refreshToken = signRefreshToken(user._id, 'individual');
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const verifyUrl = `${frontendUrl}/verify-email?token=${verificationToken}`;
 
-  user.refreshToken = refreshToken;
-  await user.save({ validateBeforeSave: false });
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 32px; background: #ffffff; border-radius: 16px; border: 1px solid #e5e7eb;">
+      <h2 style="color: #0a331c; font-size: 24px; margin-top: 0;">Welcome to Mental Swasthya</h2>
+      <p style="color: #374151; font-size: 15px; line-height: 1.6;">Hello ${user.name || 'there'},</p>
+      <p style="color: #374151; font-size: 15px; line-height: 1.6;">Thank you for creating an account with Mental Swasthya. To complete your registration and activate your account, please enter the 6-digit verification code below or click the verification link:</p>
+      
+      <div style="margin: 28px 0; padding: 20px; background: #f4f8f3; border-radius: 12px; text-align: center; border: 1px solid #dbe8da;">
+        <span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; color: #4a6b47; font-weight: 700; display: block; margin-bottom: 8px;">Your Verification Code</span>
+        <span style="font-size: 32px; font-weight: 800; letter-spacing: 6px; color: #0a331c; font-family: monospace;">${otp}</span>
+      </div>
 
-  return { accessToken, refreshToken, user: sanitize(user) };
+      <div style="margin: 24px 0; text-align: center;">
+        <a href="${verifyUrl}" style="background-color: #0a331c; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 14px; display: inline-block;">Verify Email Address</a>
+      </div>
+
+      <p style="color: #6b7280; font-size: 13px; line-height: 1.5;">Or copy and paste this link into your browser:</p>
+      <p style="color: #0a331c; font-size: 13px; word-break: break-all;"><a href="${verifyUrl}" style="color: #0a331c;">${verifyUrl}</a></p>
+      <hr style="border: none; border-top: 1px solid #f3f4f6; margin: 24px 0;" />
+      <p style="color: #9ca3af; font-size: 12px; margin-bottom: 0;">This code and link will expire in 24 hours. If you did not sign up for Mental Swasthya, please ignore this email.</p>
+    </div>
+  `;
+
+  await sendEmail(user.email, 'Mental Swasthya - Verify Your Email', html);
+  console.log(`[MentalSwasthya Auth] Email Verification sent to ${user.email}. URL: ${verifyUrl} | OTP: ${otp}`);
+
+  return {
+    requiresEmailVerification: true,
+    email: user.email,
+    message: 'Registration successful. A verification code and link has been sent to your email.',
+  };
 };
 
 export const corporateSignUp = async ({ name, email, password, orgName, seats = 10 }: any) => {
@@ -195,6 +230,15 @@ export const login = async ({ email, password, issuer }: any, ipAddress: string 
     throw { status: 403, message: 'No corporate organisation linked to this account' };
   }
 
+  if (issuer === 'individual' && user.isEmailVerified === false) {
+    throw {
+      status: 403,
+      requiresEmailVerification: true,
+      email: user.email,
+      message: 'Please verify your email before logging in. A verification code and link were sent to your inbox.',
+    };
+  }
+
   user.failedLoginAttempts = 0;
   user.lockUntil = null;
   user.lastLoginAt = new Date();
@@ -325,4 +369,102 @@ export const resetPassword = async (token: string, newPassword: string) => {
   });
 
   return { message: 'Password has been reset successfully. Please log in with your new password.' };
+};
+
+export const verifyEmail = async ({ token, email, otp }: { token?: string; email?: string; otp?: string }) => {
+  let user: any;
+
+  if (token) {
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    user = await User.findOne({
+      emailVerificationToken: hashedToken,
+      emailVerificationExpires: { $gt: new Date() },
+    }).select('+emailVerificationToken +emailVerificationExpires +refreshToken');
+  } else if (email && otp) {
+    user = await User.findOne({
+      email: email.toLowerCase().trim(),
+      emailVerificationOtp: otp.trim(),
+      emailVerificationExpires: { $gt: new Date() },
+    }).select('+emailVerificationOtp +emailVerificationExpires +refreshToken');
+  } else {
+    throw { status: 400, message: 'Verification token or email with code is required.' };
+  }
+
+  if (!user) {
+    throw { status: 400, message: 'Invalid or expired verification code or link.' };
+  }
+
+  user.isEmailVerified = true;
+  user.emailVerificationToken = null;
+  user.emailVerificationExpires = null;
+  user.emailVerificationOtp = null;
+
+  const accessToken = signAccessToken(user._id, user.role, 'individual');
+  const refreshToken = signRefreshToken(user._id, 'individual');
+  user.refreshToken = refreshToken;
+  await user.save({ validateBeforeSave: false });
+
+  await AuditLog.create({
+    actor: user._id,
+    action: 'email_verified',
+    targetModel: 'User',
+    targetId: user._id,
+  });
+
+  return { accessToken, refreshToken, user: sanitize(user), message: 'Email verified successfully!' };
+};
+
+export const resendVerification = async (email: string) => {
+  if (!email) throw { status: 400, message: 'Email is required' };
+
+  const user = await User.findOne({ email: email.toLowerCase().trim() }).select(
+    '+emailVerificationToken +emailVerificationExpires +emailVerificationOtp'
+  );
+
+  if (!user) {
+    return { message: 'If this email is registered, a new verification code has been sent.' };
+  }
+
+  if (user.isEmailVerified) {
+    return { message: 'This email is already verified. Please sign in.' };
+  }
+
+  const verificationToken = crypto.randomBytes(32).toString('hex');
+  const hashedToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+  user.emailVerificationToken = hashedToken;
+  user.emailVerificationOtp = otp;
+  user.emailVerificationExpires = expires;
+  await user.save({ validateBeforeSave: false });
+
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const verifyUrl = `${frontendUrl}/verify-email?token=${verificationToken}`;
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 32px; background: #ffffff; border-radius: 16px; border: 1px solid #e5e7eb;">
+      <h2 style="color: #0a331c; font-size: 24px; margin-top: 0;">Verify Your Email Address</h2>
+      <p style="color: #374151; font-size: 15px; line-height: 1.6;">Hello ${user.name || 'there'},</p>
+      <p style="color: #374151; font-size: 15px; line-height: 1.6;">Here is your new 6-digit verification code to activate your Mental Swasthya account:</p>
+      
+      <div style="margin: 28px 0; padding: 20px; background: #f4f8f3; border-radius: 12px; text-align: center; border: 1px solid #dbe8da;">
+        <span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; color: #4a6b47; font-weight: 700; display: block; margin-bottom: 8px;">Your Verification Code</span>
+        <span style="font-size: 32px; font-weight: 800; letter-spacing: 6px; color: #0a331c; font-family: monospace;">${otp}</span>
+      </div>
+
+      <div style="margin: 24px 0; text-align: center;">
+        <a href="${verifyUrl}" style="background-color: #0a331c; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 14px; display: inline-block;">Verify Email Address</a>
+      </div>
+
+      <p style="color: #6b7280; font-size: 13px; line-height: 1.5;">Or copy and paste this link into your browser:</p>
+      <p style="color: #0a331c; font-size: 13px; word-break: break-all;"><a href="${verifyUrl}" style="color: #0a331c;">${verifyUrl}</a></p>
+      <hr style="border: none; border-top: 1px solid #f3f4f6; margin: 24px 0;" />
+      <p style="color: #9ca3af; font-size: 12px; margin-bottom: 0;">This code and link will expire in 24 hours.</p>
+    </div>
+  `;
+
+  await sendEmail(user.email, 'Mental Swasthya - Verify Your Email', html);
+  console.log(`[MentalSwasthya Auth] Resent Email Verification to ${user.email}. URL: ${verifyUrl} | OTP: ${otp}`);
+
+  return { message: 'A new verification code and link has been sent to your email.' };
 };

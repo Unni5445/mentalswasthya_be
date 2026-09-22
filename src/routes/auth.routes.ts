@@ -50,6 +50,8 @@ router.post('/individual/register', AuthController.individualRegister);
  *         description: Login successful
  */
 router.post('/individual/login', AuthController.individualLogin);
+router.post('/individual/verify-email', AuthController.verifyEmail);
+router.post('/individual/resend-verification', AuthController.resendVerification);
 router.post('/individual/forgot-password', AuthController.forgotPassword);
 router.post('/individual/reset-password', AuthController.resetPassword);
 

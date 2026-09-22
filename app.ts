@@ -22,6 +22,8 @@ import adminRoutes from "./src/routes/admin.routes";
 import musicRoutes from "./src/routes/music.routes";
 import affirmationRoutes from "./src/routes/affirmation.routes";
 import meditationRoutes from "./src/routes/meditation.routes";
+import supportRoutes from "./src/routes/support.routes";
+import { sendStreakReminders } from "./src/services/streak.service";
 
 dotenv.config();
 const app = express();
@@ -51,12 +53,12 @@ app.use(
 );
 
 // Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+// const limiter = rateLimit({
+//   windowMs: 15 * 60 * 1000,
+//   max: 100,
+//   standardHeaders: true,
+//   legacyHeaders: false,
+// });
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -64,7 +66,7 @@ const authLimiter = rateLimit({
   message: { success: false, message: 'Too many auth attempts, try again later' },
 });
 
-app.use(limiter);
+// app.use(limiter);
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
@@ -84,6 +86,7 @@ app.use("/api/saas", adminRoutes);
 app.use("/api/music", musicRoutes);
 app.use("/api/affirmation", affirmationRoutes);
 app.use("/api/meditation", meditationRoutes);
+app.use("/api/support", supportRoutes);
 
 // DB Connection
 mongoose
@@ -96,7 +99,21 @@ app.use(pageNotFound);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, () =>
-  console.log(`server run successfully http://localhost:${PORT}`)
-);
+app.listen(PORT, () => {
+  console.log(`server run successfully http://localhost:${PORT}`);
+
+  // Schedule daily streak reminder cron job (default: 18:00 daily)
+  const streakCron = process.env.STREAK_REMINDER_CRON || "0 18 * * *";
+  cron.schedule(streakCron, async () => {
+    console.log("[Cron] Running daily streak reminders job...");
+    try {
+      const res = await sendStreakReminders();
+      console.log("[Cron] Daily streak reminders finished:", res);
+    } catch (err) {
+      console.error("[Cron Error] Streak reminders job failed:", err);
+    }
+  });
+  console.log(`[Cron] Streak reminders scheduled at: ${streakCron}`);
+});
+
 
