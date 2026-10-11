@@ -8,7 +8,9 @@ export interface IUser extends Document, ISoftDelete {
   password?: string;
   role: 'individual' | 'employee' | 'org_admin' | 'super_admin';
   org: mongoose.Types.ObjectId | null;
+  giftCode?: string | null;
   appStartOption: 'first_login_of_day' | 'every_login' | 'manual';
+  weeklyOff: string[];
   isActive: boolean;
   isEmailVerified: boolean;
   failedLoginAttempts: number;
@@ -17,10 +19,17 @@ export interface IUser extends Document, ISoftDelete {
   passwordChangedAt: Date | null;
   refreshToken: string | null;
   resetPasswordToken?: string | null;
+  resetPasswordOtp?: string | null;
   resetPasswordExpires?: Date | null;
   emailVerificationToken?: string | null;
   emailVerificationExpires?: Date | null;
   emailVerificationOtp?: string | null;
+  currentDeviceId?: string | null;
+  currentDeviceName?: string | null;
+  twoFactorOtp?: string | null;
+  twoFactorOtpExpires?: Date | null;
+  twoFactorPendingDeviceId?: string | null;
+  twoFactorPendingDeviceName?: string | null;
   favoriteAffirmations: mongoose.Types.ObjectId[];
   favoriteMeditations: mongoose.Types.ObjectId[];
   comparePassword(candidate: string): Promise<boolean>;
@@ -29,7 +38,7 @@ export interface IUser extends Document, ISoftDelete {
 
 const userSchema = new Schema<IUser>(
   {
-    name: { type: String, required: true, trim: true },
+    name: { type: String, required: false, trim: true, default: '' },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     password: { type: String, required: true, minlength: 8, select: false },
 
@@ -40,11 +49,18 @@ const userSchema = new Schema<IUser>(
     },
 
     org: { type: Schema.Types.ObjectId, ref: 'Org', default: null },
+    giftCode: { type: String, trim: true, default: null },
 
     appStartOption: {
       type: String,
       enum: ['first_login_of_day', 'every_login', 'manual'],
       default: 'first_login_of_day',
+    },
+
+    weeklyOff: {
+      type: [String],
+      enum: ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'],
+      default: ['SUN'],
     },
 
     isActive: { type: Boolean, default: true },
@@ -57,10 +73,18 @@ const userSchema = new Schema<IUser>(
     passwordChangedAt: { type: Date, default: null },
     refreshToken: { type: String, select: false, default: null },
     resetPasswordToken: { type: String, select: false, default: null },
+    resetPasswordOtp: { type: String, select: false, default: null },
     resetPasswordExpires: { type: Date, select: false, default: null },
     emailVerificationToken: { type: String, select: false, default: null },
     emailVerificationExpires: { type: Date, select: false, default: null },
     emailVerificationOtp: { type: String, select: false, default: null },
+
+    currentDeviceId: { type: String, default: null },
+    currentDeviceName: { type: String, default: null },
+    twoFactorOtp: { type: String, select: false, default: null },
+    twoFactorOtpExpires: { type: Date, select: false, default: null },
+    twoFactorPendingDeviceId: { type: String, select: false, default: null },
+    twoFactorPendingDeviceName: { type: String, select: false, default: null },
 
     favoriteAffirmations: [{ type: Schema.Types.ObjectId, ref: 'Affirmation' }],
     favoriteMeditations: [{ type: Schema.Types.ObjectId, ref: 'Meditation' }],

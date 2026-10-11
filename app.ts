@@ -23,6 +23,8 @@ import musicRoutes from "./src/routes/music.routes";
 import affirmationRoutes from "./src/routes/affirmation.routes";
 import meditationRoutes from "./src/routes/meditation.routes";
 import supportRoutes from "./src/routes/support.routes";
+import userRoutes from "./src/routes/user.routes";
+import subscriptionRoutes from "./src/routes/subscription.routes";
 import { sendStreakReminders } from "./src/services/streak.service";
 
 dotenv.config();
@@ -87,6 +89,8 @@ app.use("/api/music", musicRoutes);
 app.use("/api/affirmation", affirmationRoutes);
 app.use("/api/meditation", meditationRoutes);
 app.use("/api/support", supportRoutes);
+app.use("/api/user", userRoutes);
+app.use("/api/subscription", subscriptionRoutes);
 
 // DB Connection
 mongoose
@@ -102,8 +106,8 @@ const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
   console.log(`server run successfully http://localhost:${PORT}`);
 
-  // Schedule daily streak reminder cron job (default: 18:00 daily)
-  const streakCron = process.env.STREAK_REMINDER_CRON || "0 18 * * *";
+  // Schedule daily streak reminder cron job (default: 21:00 daily)
+  const streakCron = process.env.STREAK_REMINDER_CRON || "0 21 * * *";
   cron.schedule(streakCron, async () => {
     console.log("[Cron] Running daily streak reminders job...");
     try {

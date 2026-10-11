@@ -7,8 +7,14 @@ export interface ISubscription extends Document, ISoftDelete {
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   stripePriceId?: string;
-  plan: mongoose.Types.ObjectId;
+  plan?: mongoose.Types.ObjectId;
+  tier: 'free' | 'pro' | 'executive';
+  planName: string;
+  billingCycle: 'monthly' | 'annual';
+  price: number;
   status: 'active' | 'trialing' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete';
+  autoDebit: boolean;
+  autoDebitStoppedAt?: Date | null;
   seats: number;
   seatsUsed: number;
   currentPeriodStart: Date;
@@ -27,18 +33,24 @@ const subscriptionSchema = new Schema<ISubscription>(
     stripeSubscriptionId: { type: String, default: null },
     stripePriceId: { type: String, default: null },
 
-    plan: { type: Schema.Types.ObjectId, ref: 'Plan', required: true },
+    plan: { type: Schema.Types.ObjectId, ref: 'Plan', default: null },
+    tier: { type: String, enum: ['free', 'pro', 'executive'], default: 'pro' },
+    planName: { type: String, default: 'Wellness Pro' },
+    billingCycle: { type: String, enum: ['monthly', 'annual'], default: 'annual' },
+    price: { type: Number, default: 7.99 },
+    autoDebit: { type: Boolean, default: true },
+    autoDebitStoppedAt: { type: Date, default: null },
 
     status: {
       type: String,
       enum: ['active', 'trialing', 'past_due', 'canceled', 'unpaid', 'incomplete'],
-      default: 'trialing',
+      default: 'active',
     },
 
     seats: { type: Number, default: 1, min: 1 },
     seatsUsed: { type: Number, default: 0 },
 
-    currentPeriodStart: { type: Date, required: true },
+    currentPeriodStart: { type: Date, default: Date.now },
     currentPeriodEnd: { type: Date, required: true },
 
     trialEnd: { type: Date, default: null },

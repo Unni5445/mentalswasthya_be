@@ -10,7 +10,7 @@ export interface IStreak extends Document {
     streak: number;
     achievedAt: Date;
   }>;
-  recordSession(sessionDate: Date): void;
+  recordSession(sessionDate: Date, weeklyOff?: string[]): void;
 }
 
 const streakSchema = new Schema<IStreak>(
@@ -34,20 +34,49 @@ const streakSchema = new Schema<IStreak>(
 );
 
 // Call after every completed BreathingSession
-streakSchema.methods.recordSession = function (sessionDate: Date) {
-  const today = new Date(sessionDate).setHours(0, 0, 0, 0);
-  const last = this.lastSessionDate
-    ? new Date(this.lastSessionDate).setHours(0, 0, 0, 0)
-    : null;
+streakSchema.methods.recordSession = function (sessionDate: Date, weeklyOff: string[] = ['SUN']) {
+  const today = new Date(sessionDate);
+  today.setHours(0, 0, 0, 0);
 
-  const diffDays = last ? (today - last) / 86400000 : null;
-
-  if (diffDays === null || diffDays > 1) {
-    this.currentStreak = 1; // reset or first session
-  } else if (diffDays === 1) {
-    this.currentStreak += 1;
+  const last = this.lastSessionDate ? new Date(this.lastSessionDate) : null;
+  if (last) {
+    last.setHours(0, 0, 0, 0);
   }
-  // diffDays === 0 → same day, no streak change
+
+  const DAY_MS = 86400000;
+  const DAY_CODES = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+
+  if (!last) {
+    this.currentStreak = 1; // first session
+  } else {
+    const diffDays = Math.round((today.getTime() - last.getTime()) / DAY_MS);
+
+    if (diffDays === 0) {
+      // Same day, no streak count change
+    } else if (diffDays === 1) {
+      // Direct consecutive day
+      this.currentStreak += 1;
+    } else if (diffDays > 1) {
+      // Check if all skipped days in between were excused weekly off days
+      let allIntermediateWereOff = true;
+      for (let i = 1; i < diffDays; i++) {
+        const intermediateDate = new Date(last.getTime() + i * DAY_MS);
+        const dayCode = DAY_CODES[intermediateDate.getDay()];
+        if (!weeklyOff.includes(dayCode)) {
+          allIntermediateWereOff = false;
+          break;
+        }
+      }
+
+      if (allIntermediateWereOff) {
+        // Continued across weekly off
+        this.currentStreak += 1;
+      } else {
+        // Missed an active day, reset
+        this.currentStreak = 1;
+      }
+    }
+  }
 
   if (this.currentStreak > this.longestStreak) {
     this.longestStreak = this.currentStreak;

@@ -42,7 +42,7 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
     }
 
     // Full verify with correct secret
-    const decoded = jwt.verify(token, secret) as { id: string; iss: string };
+    const decoded = jwt.verify(token, secret) as { id: string; iss: string; deviceId?: string };
 
     const user = await User.findById(decoded.id).select('+refreshToken').populate('org');
     if (!user || !user.isActive) {
@@ -52,6 +52,17 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
 
     if (user.isLocked()) {
       res.status(423).json({ success: false, message: 'Account temporarily locked' });
+      return;
+    }
+
+    // ── One Login, One Device Policy Enforcement ──
+    const incomingDeviceId = (req.headers['x-device-id'] as string) || decoded.deviceId;
+    if (user.currentDeviceId && incomingDeviceId && user.currentDeviceId !== incomingDeviceId) {
+      res.status(401).json({
+        success: false,
+        code: 'DEVICE_SWITCHED',
+        message: 'You have been logged out because this account is now active on another device (One-Device Policy).',
+      });
       return;
     }
 

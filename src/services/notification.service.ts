@@ -12,7 +12,11 @@ export const createNotification = async (data: {
 };
 
 export const getMyNotifications = async (userId: any, limit: number = 20) => {
-  return await Notification.find({ user: userId })
+  return await Notification.find({
+    user: userId,
+    channel: { $in: ['in_app', 'both'] },
+    type: { $ne: 'streak_reminder' },
+  })
     .sort({ createdAt: -1 })
     .limit(limit);
 };

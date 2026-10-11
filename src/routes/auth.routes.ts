@@ -54,6 +54,10 @@ router.post('/individual/verify-email', AuthController.verifyEmail);
 router.post('/individual/resend-verification', AuthController.resendVerification);
 router.post('/individual/forgot-password', AuthController.forgotPassword);
 router.post('/individual/reset-password', AuthController.resetPassword);
+router.post('/individual/verify-2fa', AuthController.verify2FA);
+router.post('/individual/resend-2fa', AuthController.resend2FA);
+router.post('/verify-2fa', AuthController.verify2FA);
+router.post('/resend-2fa', AuthController.resend2FA);
 
 // ── Corporate portal ──────────────────────────────────────────────────────────
 /**
