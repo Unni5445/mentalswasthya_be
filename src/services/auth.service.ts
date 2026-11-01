@@ -31,13 +31,23 @@ const sanitize = (user: any) => ({
   email: user.email,
   role: user.role,
   org: user.org,
+  mobile: user.mobile || null,
+  designation: user.designation || null,
+  photoUrl: user.photoUrl || user.avatar || null,
+  avatar: user.photoUrl || user.avatar || null,
   appStartOption: user.appStartOption,
+  weeklyOff: user.weeklyOff && user.weeklyOff.length ? user.weeklyOff : ['SUN'],
+  hasCompletedTour: user.hasCompletedTour ?? false,
 });
 
 const bcryptDummy = () =>
   bcrypt.compare('dummy', '$2b$12$invalidhashfortimingreasons00000000000000000000000');
 
-const EMAIL_VERIFICATION_EXPIRY_MS = 15 * 60 * 1000; // 15 minutes max
+const EMAIL_VERIFICATION_EXPIRY_MINUTES = Math.min(
+  Math.max(parseInt(process.env.EMAIL_VERIFICATION_EXPIRY_MINUTES || '15', 10) || 15, 1),
+  15
+);
+const EMAIL_VERIFICATION_EXPIRY_MS = EMAIL_VERIFICATION_EXPIRY_MINUTES * 60 * 1000; // 10 to 15 minutes max (capped at 15m)
 
 export const individualRegister = async ({ name, email, password, referralCode, giftCode }: any) => {
   const existing = await User.findOne({ email });
@@ -86,7 +96,7 @@ export const individualRegister = async ({ name, email, password, referralCode, 
       <p style="color: #6b7280; font-size: 13px; line-height: 1.5;">Or copy and paste this link into your browser:</p>
       <p style="color: #0a331c; font-size: 13px; word-break: break-all;"><a href="${verifyUrl}" style="color: #0a331c;">${verifyUrl}</a></p>
       <hr style="border: none; border-top: 1px solid #f3f4f6; margin: 24px 0;" />
-      <p style="color: #9ca3af; font-size: 12px; margin-bottom: 0;">This code and link will expire in 15 minutes. If you did not sign up for Mental Swasthya, please ignore this email.</p>
+      <p style="color: #9ca3af; font-size: 12px; margin-bottom: 0;">This code and link will expire in ${EMAIL_VERIFICATION_EXPIRY_MINUTES} minutes. If you did not sign up for Mental Swasthya, please ignore this email.</p>
     </div>
   `;
 
@@ -563,23 +573,39 @@ export const verifyEmail = async ({ token, email, otp }: { token?: string; email
   let user: any;
 
   if (token) {
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const hashedToken = crypto.createHash('sha256').update(token.trim()).digest('hex');
     user = await User.findOne({
       emailVerificationToken: hashedToken,
-      emailVerificationExpires: { $gt: new Date() },
     }).select('+emailVerificationToken +emailVerificationExpires +refreshToken');
+
+    if (!user) {
+      throw { status: 400, message: 'Invalid verification link.' };
+    }
+
+    if (!user.emailVerificationExpires || user.emailVerificationExpires <= new Date()) {
+      throw {
+        status: 400,
+        message: `Verification link has expired (valid for ${EMAIL_VERIFICATION_EXPIRY_MINUTES} minutes max). Please request a new verification link.`,
+      };
+    }
   } else if (email && otp) {
     user = await User.findOne({
       email: email.toLowerCase().trim(),
       emailVerificationOtp: otp.trim(),
-      emailVerificationExpires: { $gt: new Date() },
     }).select('+emailVerificationOtp +emailVerificationExpires +refreshToken');
+
+    if (!user) {
+      throw { status: 400, message: 'Invalid verification code or email address.' };
+    }
+
+    if (!user.emailVerificationExpires || user.emailVerificationExpires <= new Date()) {
+      throw {
+        status: 400,
+        message: `Verification code has expired (valid for ${EMAIL_VERIFICATION_EXPIRY_MINUTES} minutes max). Please click 'Resend Code' to receive a new one.`,
+      };
+    }
   } else {
     throw { status: 400, message: 'Verification token or email with code is required.' };
-  }
-
-  if (!user) {
-    throw { status: 400, message: 'Invalid or expired verification code or link.' };
   }
 
   user.isEmailVerified = true;
@@ -620,7 +646,7 @@ export const resendVerification = async (email: string) => {
   const verificationToken = crypto.randomBytes(32).toString('hex');
   const hashedToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const expires = new Date(Date.now() + EMAIL_VERIFICATION_EXPIRY_MS); // 15 minutes max
+  const expires = new Date(Date.now() + EMAIL_VERIFICATION_EXPIRY_MS); // 10 to 15 minutes max
 
   user.emailVerificationToken = hashedToken;
   user.emailVerificationOtp = otp;
@@ -647,7 +673,7 @@ export const resendVerification = async (email: string) => {
       <p style="color: #6b7280; font-size: 13px; line-height: 1.5;">Or copy and paste this link into your browser:</p>
       <p style="color: #0a331c; font-size: 13px; word-break: break-all;"><a href="${verifyUrl}" style="color: #0a331c;">${verifyUrl}</a></p>
       <hr style="border: none; border-top: 1px solid #f3f4f6; margin: 24px 0;" />
-      <p style="color: #9ca3af; font-size: 12px; margin-bottom: 0;">This code and link will expire in 15 minutes. If you did not request this, please ignore this email.</p>
+      <p style="color: #9ca3af; font-size: 12px; margin-bottom: 0;">This code and link will expire in ${EMAIL_VERIFICATION_EXPIRY_MINUTES} minutes. If you did not request this, please ignore this email.</p>
     </div>
   `;
 

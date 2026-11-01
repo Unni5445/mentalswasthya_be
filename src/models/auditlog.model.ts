@@ -9,6 +9,9 @@ export interface IAuditLog extends Document {
     | 'login_failed'
     | 'account_locked'
     | 'password_change'
+    | 'password_reset'
+    | 'email_verified'
+    | 'device_switch_authorized'
     | 'user_created'
     | 'user_updated'
     | 'user_deleted'
@@ -48,6 +51,9 @@ const auditLogSchema = new Schema<IAuditLog>(
         'login_failed',
         'account_locked',
         'password_change',
+        'password_reset',
+        'email_verified',
+        'device_switch_authorized',
         'user_created',
         'user_updated',
         'user_deleted',

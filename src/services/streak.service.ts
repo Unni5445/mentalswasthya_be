@@ -84,11 +84,13 @@ export const getStreak = async (userId: any) => {
 };
 
 export const sendStreakReminders = async () => {
-  const startOfDay = new Date();
-  startOfDay.setHours(0, 0, 0, 0);
-
+  const tz = process.env.CRON_TIMEZONE || 'Asia/Kolkata';
+  const nowInTz = new Date(new Date().toLocaleString('en-US', { timeZone: tz }));
   const DAY_CODES = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-  const todayDayCode = DAY_CODES[new Date().getDay()];
+  const todayDayCode = DAY_CODES[nowInTz.getDay()];
+
+  const todayDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(new Date());
+  const startOfDay = new Date(`${todayDateStr}T00:00:00.000+05:30`);
 
   // Find active users with verified emails
   const users = await User.find({ isActive: true, isEmailVerified: true }).select('name email weeklyOff');
@@ -130,31 +132,30 @@ export const sendStreakReminders = async () => {
       const frontendUrl = process.env.FRONTEND_URL || 'https://mentalswasthya.com';
       const appUrl = `${frontendUrl}/app/meditation`;
 
-      const subject = `Keep your ${displayStreak}-Day mindfulness streak alive! 🌿`;
+      const subject = `Time for your evening breathing session 🌿 • Keep your ${displayStreak}-day streak alive!`;
 
       const html = `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 32px; background: #ffffff; border-radius: 16px; border: 1px solid #e5e7eb;">
           <div style="text-align: center; margin-bottom: 24px;">
             <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.16em; color: #7d9667; font-weight: 800; display: block; margin-bottom: 6px;">Mental Swasthya</span>
-            <h2 style="color: #0a331c; font-size: 24px; margin: 0;">A quick check-in 🌿</h2>
+            <h2 style="color: #0a331c; font-size: 24px; margin: 0;">Your Evening Breathing Pause 🌿</h2>
           </div>
 
           <p style="color: #374151; font-size: 15px; line-height: 1.6;">Hi ${user.name || 'there'},</p>
-          <p style="color: #374151; font-size: 15px; line-height: 1.6;">We noticed you haven't checked in today!</p>
-          <p style="color: #374151; font-size: 15px; line-height: 1.6;">Life can get busy, and that’s okay. Remember, your progress isn't defined by a number—it’s about how you feel.</p>
-          <p style="color: #374151; font-size: 15px; line-height: 1.6;">Taking a break is part of the process, and your mental health comes first.</p>
-          <p style="color: #374151; font-size: 15px; line-height: 1.6;">Whenever you're ready, we're a click away to help you find a moment of peace today.</p>
+          <p style="color: #374151; font-size: 15px; line-height: 1.6;">Take a slow, deep breath and step away from the rush of the day.</p>
+          <p style="color: #374151; font-size: 15px; line-height: 1.6;">Even 2 to 3 minutes of paced breathing can reset your nervous system, release built-up tension, and prepare you for deep, restorative sleep.</p>
+          <p style="color: #374151; font-size: 15px; line-height: 1.6;">Whenever you're ready tonight, take a gentle pause to center yourself and keep your mindfulness practice going.</p>
 
           <div style="margin: 28px 0; padding: 22px; background: #f5faf2; border-radius: 16px; text-align: center; border: 1px solid #dbe6d6;">
             <div style="font-size: 13px; color: #526649; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; line-height: 1.4;">Keep your</div>
             <div style="font-size: 36px; font-weight: 900; color: #0a331c; margin: 4px 0; letter-spacing: -0.5px; line-height: 1.2;">${displayStreak}-Day</div>
-            <div style="font-size: 16px; color: #2e4a28; font-weight: 700; text-transform: lowercase; letter-spacing: 0.04em; line-height: 1.4;">mindfulness</div>
+            <div style="font-size: 16px; color: #2e4a28; font-weight: 700; text-transform: lowercase; letter-spacing: 0.04em; line-height: 1.4;">breathing & mindfulness</div>
             <div style="font-size: 14px; color: #526649; font-weight: 700; margin-top: 2px; line-height: 1.4;">streak alive! 🔥</div>
           </div>
 
           <div style="margin: 32px 0 16px 0; text-align: center;">
             <a href="${appUrl}" style="background-color: #0a331c; color: #ffffff; padding: 15px 36px; text-decoration: none; border-radius: 14px; font-weight: 700; font-size: 15px; display: inline-block; box-shadow: 0 4px 14px rgba(10,51,28,0.22); letter-spacing: 0.01em;">
-              Start Today's Session
+              Begin Breathing Session 🌿
             </a>
           </div>
 
@@ -180,7 +181,7 @@ export const sendStreakReminders = async () => {
         type: 'streak_reminder',
         channel: 'email',
         title: subject,
-        body: "We noticed you haven't checked in today! Life can get busy, and that's okay. Keep your mindfulness streak alive whenever you're ready.",
+        body: `Evening breathing session reminder sent: ${displayStreak}-day streak alive.`,
         isRead: false,
         emailStatus: 'sent',
         emailSentAt: new Date(),

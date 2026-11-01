@@ -87,4 +87,68 @@ router.post('/complete/:sessionId', BreathingController.completeSession);
  */
 router.get('/history', BreathingController.getHistory);
 
+/**
+ * @swagger
+ * /api/breathing/custom-presets:
+ *   get:
+ *     summary: Get user's custom breathing presets from database
+ *     tags: [Breathing]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Custom breathing presets grouped by shape
+ */
+router.get('/custom-presets', BreathingController.getCustomPresets);
+
+/**
+ * @swagger
+ * /api/breathing/custom-presets:
+ *   post:
+ *     summary: Save custom breathing preset in database (max 3 per shape, overwrites oldest)
+ *     tags: [Breathing]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [shape, inhale, exhale]
+ *             properties:
+ *               shape: { type: string, enum: [triangle, box, circle] }
+ *               name: { type: string }
+ *               timingLabel: { type: string }
+ *               inhale: { type: number }
+ *               hold1: { type: number }
+ *               exhale: { type: number }
+ *               hold2: { type: number }
+ *     responses:
+ *       201:
+ *         description: Preset saved
+ */
+router.post('/custom-presets', BreathingController.saveCustomPreset);
+
+/**
+ * @swagger
+ * /api/breathing/custom-presets/{id}:
+ *   delete:
+ *     summary: Delete custom breathing preset by ID from database
+ *     tags: [Breathing]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Preset deleted
+ */
+router.delete('/custom-presets/:id', BreathingController.deleteCustomPreset);
+
 export default router;
+

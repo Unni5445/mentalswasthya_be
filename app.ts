@@ -106,18 +106,23 @@ const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
   console.log(`server run successfully http://localhost:${PORT}`);
 
-  // Schedule daily streak reminder cron job (default: 21:00 daily)
+  // Schedule daily streak reminder cron job (default: 21:00 daily IST)
   const streakCron = process.env.STREAK_REMINDER_CRON || "0 21 * * *";
-  cron.schedule(streakCron, async () => {
-    console.log("[Cron] Running daily streak reminders job...");
-    try {
-      const res = await sendStreakReminders();
-      console.log("[Cron] Daily streak reminders finished:", res);
-    } catch (err) {
-      console.error("[Cron Error] Streak reminders job failed:", err);
-    }
-  });
-  console.log(`[Cron] Streak reminders scheduled at: ${streakCron}`);
+  const cronTimezone = process.env.CRON_TIMEZONE || "Asia/Kolkata";
+  cron.schedule(
+    streakCron,
+    async () => {
+      console.log("[Cron] Running daily streak reminders job...");
+      try {
+        const res = await sendStreakReminders();
+        console.log("[Cron] Daily streak reminders finished:", res);
+      } catch (err) {
+        console.error("[Cron Error] Streak reminders job failed:", err);
+      }
+    },
+    { timezone: cronTimezone }
+  );
+  console.log(`[Cron] Streak reminders scheduled at: ${streakCron} (${cronTimezone})`);
 });
 
 

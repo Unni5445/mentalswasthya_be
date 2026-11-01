@@ -9,10 +9,15 @@ export interface IUser extends Document, ISoftDelete {
   role: 'individual' | 'employee' | 'org_admin' | 'super_admin';
   org: mongoose.Types.ObjectId | null;
   giftCode?: string | null;
+  mobile?: string | null;
+  designation?: string | null;
+  photoUrl?: string | null;
+  avatar?: string | null;
   appStartOption: 'first_login_of_day' | 'every_login' | 'manual';
   weeklyOff: string[];
   isActive: boolean;
   isEmailVerified: boolean;
+  hasCompletedTour: boolean;
   failedLoginAttempts: number;
   lockUntil: Date | null;
   lastLoginAt: Date | null;
@@ -50,6 +55,10 @@ const userSchema = new Schema<IUser>(
 
     org: { type: Schema.Types.ObjectId, ref: 'Org', default: null },
     giftCode: { type: String, trim: true, default: null },
+    mobile: { type: String, trim: true, default: null },
+    designation: { type: String, trim: true, default: null },
+    photoUrl: { type: String, trim: true, default: null },
+    avatar: { type: String, trim: true, default: null },
 
     appStartOption: {
       type: String,
@@ -65,6 +74,7 @@ const userSchema = new Schema<IUser>(
 
     isActive: { type: Boolean, default: true },
     isEmailVerified: { type: Boolean, default: false },
+    hasCompletedTour: { type: Boolean, default: false },
 
     failedLoginAttempts: { type: Number, default: 0 },
     lockUntil: { type: Date, default: null },

@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import asyncHandler from '../utils/asyncHandler';
 import ApiResponse from '../utils/ApiResponse';
-import { User } from '../models';
+import { User, AuditLog } from '../models';
 import * as streakService from '../services/streak.service';
 
 const sanitizeUser = (user: any) => ({
@@ -10,10 +10,15 @@ const sanitizeUser = (user: any) => ({
   email: user.email,
   role: user.role,
   org: user.org,
+  mobile: user.mobile || null,
+  designation: user.designation || null,
+  photoUrl: user.photoUrl || user.avatar || null,
+  avatar: user.photoUrl || user.avatar || null,
   appStartOption: user.appStartOption,
   weeklyOff: user.weeklyOff && user.weeklyOff.length ? user.weeklyOff : ['SUN'],
   isActive: user.isActive,
   isEmailVerified: user.isEmailVerified,
+  hasCompletedTour: user.hasCompletedTour ?? false,
   lastLoginAt: user.lastLoginAt,
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
@@ -45,7 +50,18 @@ class UserController {
 
   static updateProfile = asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user._id;
-    const { name, weeklyOff, appStartOption, currentPassword, newPassword } = req.body;
+    const {
+      name,
+      mobile,
+      designation,
+      photoUrl,
+      avatar,
+      weeklyOff,
+      appStartOption,
+      currentPassword,
+      newPassword,
+      hasCompletedTour,
+    } = req.body;
 
     const user = await User.findById(userId).select('+password').populate('org');
     if (!user) {
@@ -57,9 +73,23 @@ class UserController {
       user.name = name.trim();
     }
 
+    if (mobile !== undefined) {
+      user.mobile = typeof mobile === 'string' ? mobile.trim() : null;
+    }
+
+    if (designation !== undefined) {
+      user.designation = typeof designation === 'string' ? designation.trim() : null;
+    }
+
+    if (photoUrl !== undefined || avatar !== undefined) {
+      const img = (photoUrl !== undefined ? photoUrl : avatar) || null;
+      user.photoUrl = img;
+      user.avatar = img;
+    }
+
     if (Array.isArray(weeklyOff)) {
       const validDays = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
-      const filtered = weeklyOff.map((d: any) => String(d).toUpperCase().trim()).filter(d => validDays.includes(d));
+      const filtered = weeklyOff.map((d: any) => String(d).toUpperCase().trim()).filter((d) => validDays.includes(d));
       user.weeklyOff = filtered.length > 0 ? filtered : ['SUN'];
     } else if (typeof weeklyOff === 'string' && weeklyOff.trim()) {
       const validDays = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
@@ -71,6 +101,10 @@ class UserController {
 
     if (appStartOption && ['first_login_of_day', 'every_login', 'manual'].includes(appStartOption)) {
       user.appStartOption = appStartOption;
+    }
+
+    if (typeof hasCompletedTour === 'boolean') {
+      user.hasCompletedTour = hasCompletedTour;
     }
 
     // Optional change password
@@ -93,9 +127,28 @@ class UserController {
 
       user.password = newPassword;
       user.refreshToken = null;
+
+      await AuditLog.create({
+        actor: user._id,
+        org: user.org?._id || null,
+        action: 'password_change',
+        targetModel: 'User',
+        targetId: user._id,
+      });
     }
 
     await user.save();
+
+    await AuditLog.create({
+      actor: user._id,
+      org: user.org?._id || null,
+      action: 'user_updated',
+      targetModel: 'User',
+      targetId: user._id,
+      meta: {
+        updatedFields: Object.keys(req.body).filter((k) => k !== 'currentPassword' && k !== 'newPassword'),
+      },
+    });
 
     const streak = await streakService.getStreak(userId);
 
@@ -109,6 +162,83 @@ class UserController {
         'Profile updated successfully'
       )
     );
+  });
+
+  static uploadPhoto = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user._id;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      res.status(404).json(new ApiResponse(404, null, 'User not found'));
+      return;
+    }
+
+    if (!req.file) {
+      res.status(400).json(new ApiResponse(400, null, 'No photo file provided'));
+      return;
+    }
+
+    const photoUrl = `/uploads/profiles/${req.file.filename}`;
+    user.photoUrl = photoUrl;
+    user.avatar = photoUrl;
+    await user.save({ validateBeforeSave: false });
+
+    await AuditLog.create({
+      actor: user._id,
+      org: user.org?._id || null,
+      action: 'user_updated',
+      targetModel: 'User',
+      targetId: user._id,
+      meta: { field: 'photoUrl', value: photoUrl },
+    });
+
+    res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          photoUrl,
+          avatar: photoUrl,
+          user: sanitizeUser(user),
+        },
+        'Profile photo uploaded successfully'
+      )
+    );
+  });
+
+  static deleteAccount = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user._id;
+    const { password } = req.body;
+
+    if (!password) {
+      res.status(400).json(new ApiResponse(400, null, 'Password is required to delete your account'));
+      return;
+    }
+
+    const user = await User.findById(userId).select('+password');
+    if (!user) {
+      res.status(404).json(new ApiResponse(404, null, 'User not found'));
+      return;
+    }
+
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      res.status(400).json(new ApiResponse(400, null, 'Incorrect password. Account deletion aborted.'));
+      return;
+    }
+
+    user.isActive = false;
+    user.refreshToken = null;
+    await user.softDelete();
+
+    await AuditLog.create({
+      actor: userId,
+      org: user.org || null,
+      action: 'user_deleted',
+      targetModel: 'User',
+      targetId: userId,
+    });
+
+    res.status(200).json(new ApiResponse(200, null, 'Account deleted successfully'));
   });
 
   static getStreak = asyncHandler(async (req: Request, res: Response) => {

@@ -10,6 +10,7 @@ import Music from './music.model';
 import Affirmation from './affirmation.model';
 import Meditation from './meditation.model';
 import SupportMessage from './support.model';
+import CustomBreathingPreset from './custombreathingpreset.model';
 
 export {
   User,
@@ -24,4 +25,6 @@ export {
   Affirmation,
   Meditation,
   SupportMessage,
+  CustomBreathingPreset,
 };
+

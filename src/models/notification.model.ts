@@ -6,6 +6,7 @@ export interface INotification extends Document {
   type:
     | 'streak_reminder'
     | 'streak_milestone'
+    | 'session_completed'
     | 'subscription_expiring'
     | 'subscription_expired'
     | 'report_ready'
@@ -29,6 +30,7 @@ const notificationSchema = new Schema<INotification>(
       enum: [
         'streak_reminder',
         'streak_milestone',
+        'session_completed',
         'subscription_expiring',
         'subscription_expired',
         'report_ready',
